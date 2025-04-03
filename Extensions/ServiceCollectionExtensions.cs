@@ -3,7 +3,11 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using System.Reflection;
 using Newtonsoft.Json;
-using UnitsNet.Serialization.JsonNet;
+using UnitsNet.Serialization.SystemTextJson;
+using JsonConverter = System.Text.Json.Serialization.JsonConverter;
+using System.Text.Json.Serialization;
+using System.Text.Json;
+using UnitsNet;
 
 namespace ASP.Net.UnitsNetSerializationExamples.Extensions;
 
@@ -14,42 +18,25 @@ namespace ASP.Net.UnitsNetSerializationExamples.Extensions;
 /// This class includes methods for adding custom JSON serialization settings and configuring Swagger
 /// with custom schema mappings for UnitsNet serialization.
 /// </remarks>
-public static class ServiceCollectionExtensions
+public static partial class ServiceCollectionExtensions
 {
-    /// <summary>
-    /// Configures the application to use custom JSON serialization settings with Newtonsoft.Json.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> to which the custom JSON settings will be added.</param>
-    /// <param name="jsonConverter">The custom <see cref="JsonConverter"/> to be added to the JSON serializer settings.</param>
-    /// <returns>The updated <see cref="IServiceCollection"/> with the custom JSON settings applied.</returns>
-    public static IServiceCollection AddCustomJson(this IServiceCollection services, JsonConverter jsonConverter)
-    {
-        services.AddControllers().AddNewtonsoftJson(options =>
-        {
-            options.SerializerSettings.Formatting = Formatting.Indented;
-            options.SerializerSettings.Converters.Add(new StringEnumConverter());
-            options.SerializerSettings.Converters.Add(jsonConverter);
-        });
-        return services;
-    }
-
     /// <summary>
     /// Configures the application to use Swagger with custom schema mappings and additional settings
     /// for UnitsNet serialization.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to which Swagger services will be added.</param>
-    /// <param name="jsonConverter">
-    /// The custom <see cref="JsonConverter"/> used to determine the schema mappings for UnitsNet types.
-    /// Supported converters include <see cref="AbbreviatedUnitsConverter"/> and <see cref="UnitsNetIQuantityJsonConverter"/>.
+    /// <param name="schema">
+    /// The <see cref="SerializationSchema"/> that determines the schema mappings for UnitsNet types.
+    /// Supported schemas include <see cref="SerializationSchema.Abbreviated"/> and <see cref="SerializationSchema.UnitTypeAndName"/>.
     /// </param>
     /// <returns>The updated <see cref="IServiceCollection"/> with Swagger services configured.</returns>
     /// <remarks>
     /// This method configures Swagger to include XML comments, enable annotations, and apply custom schema filters.
-    /// Depending on the provided <paramref name="jsonConverter"/>, it applies specific schema mappings for UnitsNet types:
-    /// - <see cref="AbbreviatedUnitsConverter"/>: Maps UnitsNet types with abbreviations.
-    /// - <see cref="UnitsNetIQuantityJsonConverter"/>: Maps UnitsNet types with unit information.
+    /// Depending on the provided <paramref name="schema"/>, it applies specific schema mappings for UnitsNet types:
+    /// - <see cref="SerializationSchema.Abbreviated"/>: Maps UnitsNet types with abbreviations.
+    /// - <see cref="SerializationSchema.UnitTypeAndName"/>: Maps UnitsNet types with unit information.
     /// </remarks>
-    public static IServiceCollection AddCustomSwagger(this IServiceCollection services, JsonConverter jsonConverter)
+    public static IServiceCollection AddCustomSwagger(this IServiceCollection services, SerializationSchema schema)
     {
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
@@ -58,16 +45,25 @@ public static class ServiceCollectionExtensions
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             options.IncludeXmlComments(xmlPath);
             options.EnableAnnotations();
-            options.SchemaFilter<QuantitiesSchemaFilter>();
+            
+            options.SchemaFilter<EnumStringSchemaFilter>();
 
-            if (jsonConverter is AbbreviatedUnitsConverter)
+            options.MapType<QuantityInfo>(() => new OpenApiSchema(){Description = "Should not be mapped"});
+            options.MapType<UnitInfo>(() => new OpenApiSchema(){Description = "Should not be mapped"});
+            options.MapType<UnitKey>(() => new OpenApiSchema(){Description = "Should not be mapped"});
+            options.MapType<BaseDimensions>(() => new OpenApiSchema(){Description = "Should not be mapped"});
+            if (schema is SerializationSchema.Abbreviated)
             {
+                // options.SchemaFilter<AbbreviatedQuantitySchemaFilter>();
+                // options.SchemaFilter<AbbreviatedInterfaceQuantitySchemaFilter>();
+                // options.MapType<Density>(() => new OpenApiSchema(){Description = "Test", });
+                // options.MapType<IQuantity>(() => new OpenApiSchema(){Description = "Test IQuantity", });
                 options.SchemaGeneratorOptions.CustomTypeMappings =
                     new Dictionary<Type, Func<OpenApiSchema>>()
                         .AddIQuantityWithAbbreviationMapping(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithAbbreviations)
                         .WithAdditionalResourcesInfo();
             }
-            else if (jsonConverter is UnitsNetIQuantityJsonConverter)
+            else if (schema is SerializationSchema.UnitTypeAndName)
             {
                 options.SchemaGeneratorOptions.CustomTypeMappings =
                     new Dictionary<Type, Func<OpenApiSchema>>()
@@ -79,7 +75,7 @@ public static class ServiceCollectionExtensions
             {
                 Version = "v1",
                 Title = "UnitsNet serialization examples, with additional custom mapping",
-                Description = $"Used converter: {jsonConverter.GetType().Name}"
+                Description = $"Using converter schema: {schema}"
             });
         });
         return services;

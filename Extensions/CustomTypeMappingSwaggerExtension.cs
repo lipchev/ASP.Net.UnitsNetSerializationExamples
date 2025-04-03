@@ -142,7 +142,7 @@ public static class CustomTypeMappingSwaggerExtension
                         "value", new OpenApiSchema
                         {
                             Type = "number",
-                            Example = new OpenApiDouble(example.Value)
+                            Example = new OpenApiDouble((double)example.Value)
                         }
                     }
                 }
@@ -174,10 +174,9 @@ public static class CustomTypeMappingSwaggerExtension
         string? xmlPath = null)
         where TDictionary : IDictionary<Type, Func<OpenApiSchema>>
     {
-        var assembly = typeof(Quantity).Assembly;
         foreach (var quantityInfo in Quantity.Infos)
         {
-            var quantityStruct = assembly.GetType("UnitsNet." + quantityInfo.Name);
+            var quantityStruct = quantityInfo.QuantityType;
             var openApiSchema = toOpenApiSchemaMethod(quantityInfo, quantityStruct, xmlPath);
             mappings[quantityStruct!] = openApiSchema;
         }
@@ -204,7 +203,7 @@ public static class CustomTypeMappingSwaggerExtension
                         "Value", new OpenApiSchema
                         {
                             Type = "number",
-                            Example = new OpenApiDouble(example.Value)
+                            Example = new OpenApiDouble((double) example.Value)
                         }
                     },
                     {
@@ -247,7 +246,7 @@ public static class CustomTypeMappingSwaggerExtension
     /// UnitsNet documentation and attempts to extract a description from the XML documentation 
     /// if available.
     /// </remarks>
-    public static Func<OpenApiSchema> ToOpenApiSchemaWithAbbreviations(this QuantityInfo quantityInfo, Type unitsNetType, string xmlPath = null)
+    public static Func<OpenApiSchema> ToOpenApiSchemaWithAbbreviations(this QuantityInfo quantityInfo, Type unitsNetType, string? xmlPath = null)
     {
         var example = Quantity.FromQuantityInfo(quantityInfo, 1);
         var unitAbbreviationsCache = UnitsNetSetup.Default.UnitAbbreviations;
@@ -256,6 +255,7 @@ public static class CustomTypeMappingSwaggerExtension
 
         return () => new OpenApiSchema
         {
+            Title = quantityInfo.Name,
             Type = "object",
             Description = ExtractXmlSummary(example, xmlPath) ?? null,
             ExternalDocs = new OpenApiExternalDocs
@@ -265,13 +265,13 @@ public static class CustomTypeMappingSwaggerExtension
             },
             Example = new OpenApiObject
             {
-                ["Value"] = new OpenApiDouble(example.Value),
+                ["Value"] = new OpenApiDouble((double)example.Value),
                 ["Unit"] = new OpenApiString(example.ToString("a", CultureInfo.InvariantCulture)),
                 ["Type"] = new OpenApiString(quantityInfo.Name)
             },
             Properties = new Dictionary<string, OpenApiSchema>
             {
-                {"Value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble(example.Value)}},
+                {"Value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble((double) example.Value)}},
                 {
                     "Unit",
                     new OpenApiSchema
@@ -320,12 +320,12 @@ public static class CustomTypeMappingSwaggerExtension
             Example = new OpenApiObject
             {
                 ["unit"] = new OpenApiString(unitExample),
-                ["value"] = new OpenApiDouble(example.Value),
+                ["value"] = new OpenApiDouble((double)example.Value),
             },
             Properties = new Dictionary<string, OpenApiSchema>
             {
                 {"unit", new OpenApiSchema {Type = "string", Default = new OpenApiString(unitExample)}},
-                {"value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble(example.Value)}}
+                {"value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble((double) example.Value)}}
             }
         };
     }

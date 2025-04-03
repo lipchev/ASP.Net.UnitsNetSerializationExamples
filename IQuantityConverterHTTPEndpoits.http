@@ -11,7 +11,7 @@
 @gpermililiter = g%2Fml
 
 # GET Default Mass
-GET {{ASP.Net.UnitsNetSerializationExamples_HostAddress}}/default-mass
+GET {{ASP.Net.UnitsNetSerializationExamples_HostAddress}}/mass-unitZero
 Accept: application/json
 
 ###

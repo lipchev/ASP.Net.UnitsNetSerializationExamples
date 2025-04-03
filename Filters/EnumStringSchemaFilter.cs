@@ -5,16 +5,17 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace ASP.Net.UnitsNetSerializationExamples.Filters;
 
 /// <summary>
-/// A schema filter implementation for Swashbuckle that modifies the OpenAPI schema
-/// to represent enumeration types as strings in the generated Swagger documentation.
+///     A schema filter implementation for Swashbuckle that modifies the OpenAPI schema
+///     to represent enumeration types as strings in the generated Swagger documentation.
 /// </summary>
 /// <remarks>
-/// This filter clears the default enumeration values in the schema and replaces them
-/// with string representations of the enumeration names. It also sets the schema type
-/// to "string" and clears the format.
+///     This filter clears the default enumeration values in the schema and replaces them
+///     with string representations of the enumeration names. It also sets the schema type
+///     to "string" and clears the format.
 /// </remarks>
-public class QuantitiesSchemaFilter : ISchemaFilter
+public class EnumStringSchemaFilter : ISchemaFilter
 {
+    /// <inheritdoc />
     public void Apply(OpenApiSchema schema, SchemaFilterContext context)
     {
         if (!context.Type.IsEnum) return;
@@ -24,6 +25,7 @@ public class QuantitiesSchemaFilter : ISchemaFilter
         {
             schema.Enum.Add(new OpenApiString(name));
         }
+
         schema.Type = "string";
         schema.Format = string.Empty;
     }
